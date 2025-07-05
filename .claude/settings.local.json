@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:*)",
+      "Bash(chmod:*)",
+      "Bash(brew install:*)",
+      "Bash(./deploy.sh)"
+    ],
+    "deny": []
+  }
+}
