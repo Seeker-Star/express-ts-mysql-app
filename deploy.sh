@@ -2,7 +2,10 @@
 
 # 加载环境变量
 if [ -f .env ]; then
-    export $(cat .env | grep -v '^#' | xargs)
+    # 安全地加载环境变量
+    set -a
+    source .env
+    set +a
 fi
 
 # 部署配置
@@ -22,8 +25,7 @@ echo "🚀 开始部署到服务器 $SERVER_IP..."
 
 # 1. 构建项目
 echo "📦 构建项目..."
-npm run build
-if [ $? -ne 0 ]; then
+if ! npm run build; then
     echo "❌ 构建失败"
     exit 1
 fi
@@ -32,7 +34,7 @@ fi
 echo "📦 创建部署包..."
 # 创建临时目录准备部署文件
 mkdir -p deploy_temp
-cp -r dist/ deploy_temp/
+cp -r dist deploy_temp/
 cp package.json deploy_temp/
 cp package-lock.json deploy_temp/
 
@@ -88,8 +90,15 @@ fi
 
 # 4. 在服务器上执行部署命令
 echo "🔧 在服务器上部署..."
-sshpass -p "$SERVER_PASSWORD" ssh ${SERVER_USER}@${SERVER_IP} << EOF
-    cd ${DEPLOY_DIR}
+sshpass -p "$SERVER_PASSWORD" ssh "${SERVER_USER}@${SERVER_IP}" << EOF
+    # 设置错误退出
+    set -e
+    
+    # 创建部署目录（如果不存在）
+    mkdir -p "${DEPLOY_DIR}"
+    cd "${DEPLOY_DIR}"
+    
+    echo "📍 当前工作目录: \$(pwd)"
     
     # 停止现有服务
     echo "🛑 停止现有服务..."
@@ -104,7 +113,17 @@ sshpass -p "$SERVER_PASSWORD" ssh ${SERVER_USER}@${SERVER_IP} << EOF
     
     # 解压新版本
     echo "📦 解压新版本..."
-    tar -xzf "${PROJECT_NAME}.tar.gz"
+    if [ -f "${PROJECT_NAME}.tar.gz" ]; then
+        tar -xzf "${PROJECT_NAME}.tar.gz"
+        echo "✅ 解压完成"
+    else
+        echo "❌ 部署包文件不存在: ${PROJECT_NAME}.tar.gz"
+        exit 1
+    fi
+    
+    # 检查解压后的文件
+    echo "📋 检查解压后的文件:"
+    ls -la
     
     # 检查并处理环境文件
     echo "📝 处理环境配置文件..."
@@ -143,9 +162,29 @@ ENVEOF
         echo "⚠️  已创建默认 .env 文件，请编辑 ${DEPLOY_DIR}/.env 设置正确的数据库配置"
     fi
     
+    # 检查必要文件
+    echo "🔍 检查必要文件..."
+    if [ ! -f package.json ]; then
+        echo "❌ package.json 文件不存在"
+        exit 1
+    fi
+    
+    if [ ! -d dist ]; then
+        echo "❌ dist 目录不存在"
+        exit 1
+    fi
+    
+    if [ ! -f dist/index.js ]; then
+        echo "❌ dist/index.js 文件不存在"
+        exit 1
+    fi
+    
     # 安装依赖
     echo "📥 安装依赖..."
-    npm install --production
+    if ! npm install --production; then
+        echo "❌ 依赖安装失败"
+        exit 1
+    fi
     
     # 检查必要目录
     mkdir -p logs
