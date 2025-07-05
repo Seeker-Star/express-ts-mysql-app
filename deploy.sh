@@ -41,6 +41,34 @@ if [ -f .env.example ]; then
     cp .env.example deploy_temp/.env.example
 fi
 
+# 如果存在.env文件，验证并打包上传（用于生产环境配置）
+if [ -f .env ]; then
+    echo "📝 验证并包含环境配置文件..."
+    
+    # 检查必要的环境变量
+    required_vars=("DB_HOST" "DB_USER" "DB_DATABASE")
+    missing_vars=()
+    
+    for var in "${required_vars[@]}"; do
+        if ! grep -q "^${var}=" .env; then
+            missing_vars+=("$var")
+        fi
+    done
+    
+    if [ ${#missing_vars[@]} -eq 0 ]; then
+        echo "✅ 环境配置验证通过"
+        cp .env deploy_temp/.env
+    else
+        echo "⚠️  环境配置缺少必要变量: ${missing_vars[*]}"
+        echo "📝 使用模板文件，部署后请手动配置"
+        if [ -f .env.example ]; then
+            cp .env.example deploy_temp/.env
+        fi
+    fi
+else
+    echo "📝 未找到 .env 文件，将使用模板"
+fi
+
 # 创建部署包
 tar -czf ${PROJECT_NAME}.tar.gz -C deploy_temp .
 if [ $? -ne 0 ]; then
@@ -82,10 +110,16 @@ sshpass -p "$SERVER_PASSWORD" ssh ${SERVER_USER}@${SERVER_IP} << EOF
     tar -xzf ${PROJECT_NAME}.tar.gz
     
     # 检查并创建环境文件
-    if [ ! -f .env ] && [ -f .env.example ]; then
-        echo "📝 创建环境文件..."
-        cp .env.example .env
-        echo "⚠️  请手动编辑 .env 文件设置正确的环境变量"
+    if [ ! -f .env ]; then
+        if [ -f .env.example ]; then
+            echo "📝 从模板创建环境文件..."
+            cp .env.example .env
+            echo "⚠️  请手动编辑 .env 文件设置正确的环境变量"
+        else
+            echo "⚠️  未找到环境配置文件，请手动创建 .env"
+        fi
+    else
+        echo "✅ 环境配置文件已存在"
     fi
     
     # 安装依赖
