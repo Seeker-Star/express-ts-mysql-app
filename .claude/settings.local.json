@@ -4,7 +4,9 @@
       "Bash(npm run build:*)",
       "Bash(chmod:*)",
       "Bash(brew install:*)",
-      "Bash(./deploy.sh)"
+      "Bash(./deploy.sh)",
+      "Bash(gh auth:*)",
+      "Bash(git add:*)"
     ],
     "deny": []
   }
