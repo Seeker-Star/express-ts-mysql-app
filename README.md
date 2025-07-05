@@ -1,14 +1,20 @@
 # Express TypeScript MySQL App
 
-一个基于 Express + TypeScript + MySQL 的 Web 应用程序，具有用户管理功能和完整的日志系统。
+⚠️ **仅用于个人练习学习，无实际功能**
 
-## 功能特性
+一个基于 Express + TypeScript + MySQL 的 Web 应用程序练习项目，用于学习和掌握相关技术栈。
 
-- 🚀 Express.js + TypeScript 
-- 🗄️ MySQL 数据库连接
-- 📝 Winston 日志系统
-- 🔐 环境变量管理
-- 🚢 自动化部署脚本
+## 学习内容
+
+- 🚀 Express.js + TypeScript 基础架构
+- 🗄️ MySQL 数据库连接和操作
+- 📝 Winston 日志系统集成
+- 🔐 环境变量管理和安全配置
+- 🚢 自动化部署脚本编写
+
+## 免责声明
+
+此项目仅用于个人技术学习和练习，代码中可能包含示例数据和配置，不建议用于生产环境。
 
 ## 快速开始
 
