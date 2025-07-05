@@ -70,8 +70,7 @@ else
 fi
 
 # 创建部署包
-tar -czf ${PROJECT_NAME}.tar.gz -C deploy_temp .
-if [ $? -ne 0 ]; then
+if ! tar -czf "${PROJECT_NAME}.tar.gz" -C deploy_temp .; then
     echo "❌ 创建部署包失败"
     rm -rf deploy_temp
     exit 1
@@ -82,9 +81,7 @@ rm -rf deploy_temp
 
 # 3. 使用 sshpass 上传文件并执行部署
 echo "📤 上传部署包到服务器..."
-sshpass -p "$SERVER_PASSWORD" scp ${PROJECT_NAME}.tar.gz ${SERVER_USER}@${SERVER_IP}:${DEPLOY_DIR}/
-
-if [ $? -ne 0 ]; then
+if ! sshpass -p "$SERVER_PASSWORD" scp "${PROJECT_NAME}.tar.gz" "${SERVER_USER}@${SERVER_IP}:${DEPLOY_DIR}/"; then
     echo "❌ 上传失败"
     exit 1
 fi
@@ -107,19 +104,43 @@ sshpass -p "$SERVER_PASSWORD" ssh ${SERVER_USER}@${SERVER_IP} << EOF
     
     # 解压新版本
     echo "📦 解压新版本..."
-    tar -xzf ${PROJECT_NAME}.tar.gz
+    tar -xzf "${PROJECT_NAME}.tar.gz"
     
-    # 检查并创建环境文件
-    if [ ! -f .env ]; then
-        if [ -f .env.example ]; then
-            echo "📝 从模板创建环境文件..."
-            cp .env.example .env
-            echo "⚠️  请手动编辑 .env 文件设置正确的环境变量"
+    # 检查并处理环境文件
+    echo "📝 处理环境配置文件..."
+    if [ -f .env ]; then
+        echo "✅ 发现上传的环境配置文件"
+        # 验证环境文件是否包含必要配置
+        if grep -q "DB_HOST=" .env && grep -q "DB_USER=" .env && grep -q "DB_DATABASE=" .env; then
+            echo "✅ 环境配置验证通过"
         else
-            echo "⚠️  未找到环境配置文件，请手动创建 .env"
+            echo "⚠️  环境配置可能不完整，请检查以下必需变量:"
+            echo "   - DB_HOST"
+            echo "   - DB_USER" 
+            echo "   - DB_DATABASE"
         fi
+    elif [ -f .env.example ]; then
+        echo "📝 从模板创建环境文件..."
+        cp .env.example .env
+        echo "⚠️  请编辑 ${DEPLOY_DIR}/.env 文件设置正确的环境变量:"
+        echo "   - DB_HOST=your_database_host"
+        echo "   - DB_USER=your_database_user"
+        echo "   - DB_PASSWORD=your_database_password"
+        echo "   - DB_DATABASE=your_database_name"
     else
-        echo "✅ 环境配置文件已存在"
+        echo "❌ 未找到环境配置文件，创建默认配置..."
+        cat > .env << 'ENVEOF'
+# 数据库配置 - 请修改为实际值
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=
+DB_DATABASE=express_app
+
+# 服务器配置
+PORT=3000
+NODE_ENV=production
+ENVEOF
+        echo "⚠️  已创建默认 .env 文件，请编辑 ${DEPLOY_DIR}/.env 设置正确的数据库配置"
     fi
     
     # 安装依赖
@@ -154,7 +175,8 @@ sshpass -p "$SERVER_PASSWORD" ssh ${SERVER_USER}@${SERVER_IP} << EOF
     fi
 EOF
 
-if [ $? -eq 0 ]; then
+deployment_status=$?
+if [ $deployment_status -eq 0 ]; then
     echo "🎉 部署完成！"
     echo "🌐 应用访问地址: http://${SERVER_IP}:3000"
     echo "🔍 健康检查: http://${SERVER_IP}:3000/health"
@@ -163,7 +185,7 @@ if [ $? -eq 0 ]; then
     echo ""
     echo "📋 部署后检查清单:"
     echo "1. ✅ 访问健康检查接口确认服务正常"
-    echo "2. ⚙️  配置服务器 .env 文件中的数据库连接"
+    echo "2. ⚙️  配置服务器 ${DEPLOY_DIR}/.env 文件中的数据库连接"
     echo "3. 🗄️  确保数据库表已创建"
     echo "4. 🔒 配置防火墙开放端口 3000"
 else
@@ -172,5 +194,5 @@ else
 fi
 
 # 清理本地部署包
-rm -f ${PROJECT_NAME}.tar.gz
+rm -f "${PROJECT_NAME}.tar.gz"
 echo "🧹 清理本地部署包完成"
