@@ -4,7 +4,7 @@ import mysql from 'mysql2';
 
 // Mock dependencies
 jest.mock('mysql2');
-jest.mock('../src/logger');
+jest.mock('../src/utils/logger');
 
 // Create a test app that mimics the main app structure
 const createTestApp = () => {

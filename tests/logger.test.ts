@@ -1,4 +1,4 @@
-import logger from '../src/logger';
+import logger from '../src/utils/logger';
 
 // Mock winston to avoid file system operations during tests
 jest.mock('winston', () => ({

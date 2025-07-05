@@ -3,7 +3,7 @@ import express from 'express';
 
 // Mock dependencies
 jest.mock('mysql2');
-jest.mock('../src/logger');
+jest.mock('../src/utils/logger');
 
 // Mock the environment variables
 const mockEnv = {
