@@ -22,6 +22,11 @@ if [ -z "$SERVER_IP" ] || [ -z "$SERVER_PASSWORD" ]; then
 fi
 
 echo "🚀 开始部署到服务器 $SERVER_IP..."
+echo "📋 部署配置信息:"
+echo "   服务器IP: $SERVER_IP"
+echo "   用户名: $SERVER_USER"
+echo "   部署目录: $DEPLOY_DIR"
+echo "   项目名: $PROJECT_NAME"
 
 # 1. 构建项目
 echo "📦 构建项目..."
@@ -81,7 +86,21 @@ fi
 # 清理临时目录
 rm -rf deploy_temp
 
-# 3. 使用 sshpass 上传文件并执行部署
+# 3. 先创建目标目录，然后上传文件
+echo "📁 创建服务器目标目录..."
+echo "   正在连接: ${SERVER_USER}@${SERVER_IP}"
+echo "   创建目录: ${DEPLOY_DIR}"
+
+if ! sshpass -p "$SERVER_PASSWORD" ssh "${SERVER_USER}@${SERVER_IP}" "mkdir -p '${DEPLOY_DIR}' && echo '目录创建成功: \$(pwd)/${DEPLOY_DIR}'"; then
+    echo "❌ 创建目标目录失败"
+    echo "🔧 可能的解决方案:"
+    echo "1. 检查服务器IP和用户名是否正确"
+    echo "2. 检查SSH密码是否正确"
+    echo "3. 确保服务器允许SSH连接"
+    echo "4. 检查目标路径权限"
+    exit 1
+fi
+
 echo "📤 上传部署包到服务器..."
 if ! sshpass -p "$SERVER_PASSWORD" scp "${PROJECT_NAME}.tar.gz" "${SERVER_USER}@${SERVER_IP}:${DEPLOY_DIR}/"; then
     echo "❌ 上传失败"
