@@ -9,7 +9,8 @@
 - 🚀 Express.js + TypeScript 基础架构
 - 🗄️ MySQL 数据库连接和操作
 - 📝 Winston 日志系统集成
-- 🔐 环境变量管理和安全配置
+- 🔐 用户认证系统和密码安全处理
+- 🔑 环境变量管理和安全配置
 - 🚢 自动化部署脚本编写
 - 🏗️ 分层架构和模块化设计
 - 🧪 完整的测试套件 (Jest + TypeScript)
@@ -58,13 +59,29 @@ PROJECT_NAME=express-ts-mysql-app
 
 ### 3. 数据库设置
 
-确保你的 MySQL 数据库中有一个 `users` 表：
+运行数据库初始化脚本：
+
+```bash
+npm run init-db
+```
+
+或者手动创建所需的表：
 
 ```sql
+-- 创建用户表
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     address VARCHAR(255)
+);
+
+-- 创建认证用户表
+CREATE TABLE auth_users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 ```
 
@@ -83,9 +100,17 @@ npm start
 
 ## API 接口
 
+### 用户认证
+- `POST /register` - 用户注册
+
+### 用户管理
 - `GET /users` - 获取所有用户
 - `GET /add-user` - 添加随机用户
+
+### 系统
 - `GET /health` - 健康检查接口
+
+详细API文档请查看 [API_DOCUMENTATION.md](API_DOCUMENTATION.md)
 
 ## 部署
 
@@ -112,7 +137,8 @@ express-ts-mysql-app/
 ├── src/                          # 源代码目录
 │   ├── config/                   # 配置文件
 │   │   ├── database.ts           # 数据库配置和连接
-│   │   └── env.ts                # 环境变量配置
+│   │   ├── env.ts                # 环境变量配置
+│   │   └── init-db.sql           # 数据库初始化SQL
 │   ├── controllers/              # 控制器层
 │   │   └── userController.ts     # 用户控制器
 │   ├── middleware/               # 中间件
@@ -126,9 +152,12 @@ express-ts-mysql-app/
 │   ├── types/                    # TypeScript 类型定义
 │   │   └── user.ts               # 用户相关类型
 │   ├── utils/                    # 工具函数
+│   │   ├── auth.ts               # 认证工具
 │   │   └── logger.ts             # 日志工具
 │   ├── app.ts                    # 应用配置和初始化
 │   └── index.ts                  # 应用入口文件
+├── scripts/                      # 脚本文件
+│   └── init-db.js                # 数据库初始化脚本
 ├── tests/                        # 测试文件
 │   ├── app.test.ts               # 应用配置测试
 │   ├── database.test.ts          # 数据库测试
@@ -153,6 +182,9 @@ express-ts-mysql-app/
 - 所有敏感信息已移动到 `.env` 文件
 - `.env` 文件已添加到 `.gitignore`
 - 使用 `.env.example` 作为配置模板
+- 密码使用 bcrypt 进行安全哈希处理
+- 用户名唯一性约束防止重复注册
+- 输入验证和错误处理保护系统安全
 
 ## 架构特点
 
@@ -207,3 +239,4 @@ npm start
 
 - 📋 [测试报告](TEST_REPORT.md) - 详细的测试分析和覆盖率报告
 - 🏗️ [结构说明](STRUCTURE.md) - 项目架构和优化详情
+- 📚 [API文档](API_DOCUMENTATION.md) - 完整的接口文档和使用示例
