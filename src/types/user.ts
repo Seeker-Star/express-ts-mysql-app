@@ -25,6 +25,27 @@ export interface RegisterUserRequest {
   password: string;
 }
 
+export interface LoginUserRequest {
+  username: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  message: string;
+  token: string;
+  user: {
+    id: number;
+    username: string;
+  };
+}
+
+export interface JWTPayload {
+  userId: number;
+  username: string;
+  iat?: number;
+  exp?: number;
+}
+
 export interface UserQueryResult {
   id: number;
   name: string;

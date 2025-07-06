@@ -70,7 +70,70 @@ fetch('http://localhost:3000/register', {
 | 409 | 用户名已存在 | `{"error": "用户名已存在"}` |
 | 500 | 服务器错误 | `{"error": "服务器内部错误"}` |
 
-## 现有用户管理接口
+### 用户登录
+
+用户登录接口，验证用户名和密码，成功后返回JWT Token用于后续请求认证。
+
+**接口地址**: `POST /login`
+
+#### 请求参数
+
+| 参数名 | 类型 | 必填 | 描述 | 限制 |
+|--------|------|------|------|------|
+| username | string | 是 | 用户名 | 已注册的用户名 |
+| password | string | 是 | 密码 | 用户注册时的密码 |
+
+#### 请求示例
+
+```bash
+curl -X POST http://localhost:3000/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "testuser",
+    "password": "mypassword123"
+  }'
+```
+
+```javascript
+// JavaScript Fetch API
+fetch('http://localhost:3000/login', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    username: 'testuser',
+    password: 'mypassword123'
+  })
+})
+.then(response => response.json())
+.then(data => console.log(data));
+```
+
+#### 响应
+
+**成功响应 (200 OK)**
+
+```json
+{
+  "message": "登录成功",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": 1,
+    "username": "testuser"
+  }
+}
+```
+
+**失败响应**
+
+| HTTP状态码 | 错误类型 | 响应示例 |
+|-----------|----------|----------|
+| 400 | 参数缺失 | `{"error": "用户名和密码不能为空"}` |
+| 401 | 认证失败 | `{"error": "用户名或密码错误"}` |
+| 500 | 服务器错误 | `{"error": "服务器内部错误"}` |
+
+## 用户管理接口（需要认证）
 
 ### 获取用户列表
 
@@ -78,10 +141,14 @@ fetch('http://localhost:3000/register', {
 
 **接口地址**: `GET /users`
 
+⚠️ **需要认证**: 此接口需要在请求头中包含有效的JWT Token
+
 #### 请求示例
 
 ```bash
-curl -X GET http://localhost:3000/users
+# 需要先登录获取token
+curl -X GET http://localhost:3000/users \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 #### 响应
@@ -109,10 +176,14 @@ curl -X GET http://localhost:3000/users
 
 **接口地址**: `GET /add-user`
 
+⚠️ **需要认证**: 此接口需要在请求头中包含有效的JWT Token
+
 #### 请求示例
 
 ```bash
-curl -X GET http://localhost:3000/add-user
+# 需要先登录获取token
+curl -X GET http://localhost:3000/add-user \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 #### 响应
@@ -223,6 +294,10 @@ DB_DATABASE=your_database
 # 服务器配置
 PORT=3000
 NODE_ENV=development
+
+# JWT配置
+JWT_SECRET=your-super-secret-key
+JWT_EXPIRES_IN=24h
 ```
 
 ### 启动服务
@@ -267,15 +342,57 @@ curl -X POST http://localhost:3000/register \
   -d '{"username": "validuser"}'
 ```
 
+### JWT Token认证说明
+
+所有需要认证的接口都必须在请求头中包含有效的JWT Token：
+
+```bash
+Authorization: Bearer <token>
+```
+
+**认证流程**：
+1. 用户通过 `/login` 接口登录，获取JWT Token
+2. 在后续请求中，将Token放在Authorization头中
+3. 服务器验证Token的有效性
+4. Token过期需要重新登录
+
+**错误响应**：
+- `401 Unauthorized`: 缺少Token或Token无效
+- `403 Forbidden`: Token格式错误或已过期
+
+### 完整的JWT认证流程测试
+
+```bash
+# 1. 注册用户
+curl -X POST http://localhost:3000/register \
+  -H "Content-Type: application/json" \
+  -d '{"username": "testuser", "password": "password123"}'
+
+# 2. 登录获取Token
+TOKEN=$(curl -X POST http://localhost:3000/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "testuser", "password": "password123"}' \
+  | jq -r '.token')
+
+# 3. 使用Token访问受保护的接口
+curl -X GET http://localhost:3000/users \
+  -H "Authorization: Bearer $TOKEN"
+
+# 4. 添加新用户（需要认证）
+curl -X GET http://localhost:3000/add-user \
+  -H "Authorization: Bearer $TOKEN"
+```
+
 ## 待实现功能
 
 以下功能可在后续版本中实现：
 
-- [ ] 用户登录接口
-- [ ] JWT Token 认证
+- [x] 用户登录接口
+- [x] JWT Token 认证
 - [ ] 密码重置功能
 - [ ] 用户信息更新
 - [ ] 用户注销
+- [ ] Token刷新机制
 - [ ] 密码强度验证增强
 - [ ] 用户角色和权限管理
 - [ ] 账号锁定机制

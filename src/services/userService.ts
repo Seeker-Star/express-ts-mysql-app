@@ -1,7 +1,7 @@
-import { User, UserQueryResult, DatabaseResult, AuthUser, RegisterUserRequest } from '../types/user';
+import { User, UserQueryResult, DatabaseResult, AuthUser, RegisterUserRequest, LoginUserRequest } from '../types/user';
 import db from '../config/database';
 import logger from '../utils/logger';
-import { hashPassword } from '../utils/auth';
+import { hashPassword, comparePassword } from '../utils/auth';
 
 export class UserService {
   // 获取所有用户
@@ -107,6 +107,57 @@ export class UserService {
         reject(error);
       }
     });
+  }
+
+  // 根据用户名查找用户
+  static async findUserByUsername(username: string): Promise<AuthUser | null> {
+    return new Promise((resolve, reject) => {
+      const sql = 'SELECT id, username, password, created_at, updated_at FROM auth_users WHERE username = ?';
+      
+      db.query(sql, [username], (err, results) => {
+        if (err) {
+          logger.error('查找用户失败', { error: err.message, username });
+          reject(err);
+        } else {
+          const resultArray = results as AuthUser[];
+          if (resultArray.length > 0) {
+            resolve(resultArray[0]);
+          } else {
+            resolve(null);
+          }
+        }
+      });
+    });
+  }
+
+  // 用户登录验证
+  static async loginUser(loginData: LoginUserRequest): Promise<AuthUser | null> {
+    try {
+      const { username, password } = loginData;
+      
+      // 查找用户
+      const user = await this.findUserByUsername(username);
+      if (!user) {
+        logger.warn('用户登录失败：用户不存在', { username });
+        return null;
+      }
+
+      // 验证密码
+      const isPasswordValid = await comparePassword(password, user.password);
+      if (!isPasswordValid) {
+        logger.warn('用户登录失败：密码错误', { username });
+        return null;
+      }
+
+      logger.info('用户登录成功', { userId: user.id, username });
+      return user;
+    } catch (error) {
+      logger.error('用户登录过程中发生错误', { 
+        error: error instanceof Error ? error.message : '未知错误', 
+        username: loginData.username 
+      });
+      throw error;
+    }
   }
 }
 
