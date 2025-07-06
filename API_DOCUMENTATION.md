@@ -1,0 +1,282 @@
+# API 接口文档
+
+## 基础信息
+
+- **Base URL**: `http://localhost:3000`
+- **Content-Type**: `application/json`
+- **字符编码**: UTF-8
+
+## 用户认证相关接口
+
+### 用户注册
+
+注册新用户账号，用户名必须唯一，密码将被安全哈希处理后存储。
+
+**接口地址**: `POST /register`
+
+#### 请求参数
+
+| 参数名 | 类型 | 必填 | 描述 | 限制 |
+|--------|------|------|------|------|
+| username | string | 是 | 用户名 | 3-50个字符，必须唯一 |
+| password | string | 是 | 密码 | 至少6个字符 |
+
+#### 请求示例
+
+```bash
+curl -X POST http://localhost:3000/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "testuser",
+    "password": "mypassword123"
+  }'
+```
+
+```javascript
+// JavaScript Fetch API
+fetch('http://localhost:3000/register', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    username: 'testuser',
+    password: 'mypassword123'
+  })
+})
+.then(response => response.json())
+.then(data => console.log(data));
+```
+
+#### 响应
+
+**成功响应 (201 Created)**
+
+```json
+{
+  "message": "用户注册成功",
+  "userId": 1,
+  "username": "testuser"
+}
+```
+
+**失败响应**
+
+| HTTP状态码 | 错误类型 | 响应示例 |
+|-----------|----------|----------|
+| 400 | 参数缺失 | `{"error": "用户名和密码不能为空"}` |
+| 400 | 用户名长度无效 | `{"error": "用户名长度必须在3-50个字符之间"}` |
+| 400 | 密码长度无效 | `{"error": "密码长度至少6个字符"}` |
+| 409 | 用户名已存在 | `{"error": "用户名已存在"}` |
+| 500 | 服务器错误 | `{"error": "服务器内部错误"}` |
+
+## 现有用户管理接口
+
+### 获取用户列表
+
+获取所有已注册的普通用户信息（不包含认证用户）。
+
+**接口地址**: `GET /users`
+
+#### 请求示例
+
+```bash
+curl -X GET http://localhost:3000/users
+```
+
+#### 响应
+
+**成功响应 (200 OK)**
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Alice123",
+    "address": "Address456"
+  },
+  {
+    "id": 2,
+    "name": "Alice789",
+    "address": "Address321"
+  }
+]
+```
+
+### 添加随机用户
+
+添加一个随机生成的用户（用于测试目的）。
+
+**接口地址**: `GET /add-user`
+
+#### 请求示例
+
+```bash
+curl -X GET http://localhost:3000/add-user
+```
+
+#### 响应
+
+**成功响应 (200 OK)**
+
+```
+插入用户，ID: 3, 姓名: Alice456, 地址: Address789
+```
+
+## 数据模型
+
+### AuthUser（认证用户）
+
+```typescript
+interface AuthUser {
+  id?: number;
+  username: string;      // 用户名，3-50字符，唯一
+  password: string;      // 哈希处理后的密码
+  created_at?: Date;     // 创建时间
+  updated_at?: Date;     // 更新时间
+}
+```
+
+### RegisterUserRequest（注册请求）
+
+```typescript
+interface RegisterUserRequest {
+  username: string;      // 用户名，3-50字符
+  password: string;      // 密码，至少6字符
+}
+```
+
+### User（普通用户）
+
+```typescript
+interface User {
+  id?: number;
+  name: string;          // 用户姓名
+  address: string;       // 用户地址
+  created_at?: Date;     // 创建时间
+  updated_at?: Date;     // 更新时间
+}
+```
+
+## 安全特性
+
+### 密码安全
+
+- **哈希算法**: bcrypt
+- **Salt轮数**: 12轮
+- **密码要求**: 最少6个字符
+- **存储**: 仅存储哈希值，不存储明文密码
+
+### 数据验证
+
+- **用户名唯一性**: 数据库层面唯一约束
+- **输入验证**: 服务端验证所有输入参数
+- **错误处理**: 详细的错误信息和适当的HTTP状态码
+
+## 错误码说明
+
+| HTTP状态码 | 描述 | 常见原因 |
+|-----------|------|----------|
+| 200 | 成功 | 请求处理成功 |
+| 201 | 创建成功 | 用户注册成功 |
+| 400 | 请求错误 | 参数缺失或格式错误 |
+| 409 | 资源冲突 | 用户名已存在 |
+| 500 | 服务器错误 | 数据库连接失败或其他服务器问题 |
+
+## 数据库表结构
+
+### auth_users 表
+
+```sql
+CREATE TABLE auth_users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(50) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+### users 表
+
+```sql
+CREATE TABLE users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  address VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+## 部署和环境配置
+
+### 环境变量
+
+```bash
+# 数据库配置
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=your_password
+DB_DATABASE=your_database
+
+# 服务器配置
+PORT=3000
+NODE_ENV=development
+```
+
+### 启动服务
+
+```bash
+# 开发环境
+npm run dev
+
+# 生产环境
+npm run build
+npm start
+```
+
+## 测试示例
+
+### 完整的用户注册流程测试
+
+```bash
+# 1. 正常注册
+curl -X POST http://localhost:3000/register \
+  -H "Content-Type: application/json" \
+  -d '{"username": "newuser", "password": "password123"}'
+
+# 2. 测试重复用户名
+curl -X POST http://localhost:3000/register \
+  -H "Content-Type: application/json" \
+  -d '{"username": "newuser", "password": "password456"}'
+
+# 3. 测试用户名太短
+curl -X POST http://localhost:3000/register \
+  -H "Content-Type: application/json" \
+  -d '{"username": "ab", "password": "password123"}'
+
+# 4. 测试密码太短
+curl -X POST http://localhost:3000/register \
+  -H "Content-Type: application/json" \
+  -d '{"username": "validuser", "password": "123"}'
+
+# 5. 测试缺少参数
+curl -X POST http://localhost:3000/register \
+  -H "Content-Type: application/json" \
+  -d '{"username": "validuser"}'
+```
+
+## 待实现功能
+
+以下功能可在后续版本中实现：
+
+- [ ] 用户登录接口
+- [ ] JWT Token 认证
+- [ ] 密码重置功能
+- [ ] 用户信息更新
+- [ ] 用户注销
+- [ ] 密码强度验证增强
+- [ ] 用户角色和权限管理
+- [ ] 账号锁定机制
+- [ ] 登录日志记录

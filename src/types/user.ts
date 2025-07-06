@@ -7,9 +7,22 @@ export interface User {
   updated_at?: Date;
 }
 
+export interface AuthUser {
+  id?: number;
+  username: string;
+  password: string;
+  created_at?: Date;
+  updated_at?: Date;
+}
+
 export interface CreateUserRequest {
   name?: string;
   address?: string;
+}
+
+export interface RegisterUserRequest {
+  username: string;
+  password: string;
 }
 
 export interface UserQueryResult {

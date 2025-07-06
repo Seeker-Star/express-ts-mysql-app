@@ -46,6 +46,63 @@ export class UserController {
       res.status(500).send(errorMessage);
     }
   }
+
+  // 用户注册
+  static async registerUser(req: Request, res: Response): Promise<void> {
+    try {
+      const { username, password } = req.body;
+
+      // 验证请求数据
+      if (!username || !password) {
+        res.status(400).json({ 
+          error: '用户名和密码不能为空' 
+        });
+        return;
+      }
+
+      // 验证用户名长度
+      if (username.length < 3 || username.length > 50) {
+        res.status(400).json({ 
+          error: '用户名长度必须在3-50个字符之间' 
+        });
+        return;
+      }
+
+      // 验证密码强度
+      if (password.length < 6) {
+        res.status(400).json({ 
+          error: '密码长度至少6个字符' 
+        });
+        return;
+      }
+
+      logger.info('用户注册请求', { 
+        username, 
+        ip: req.ip, 
+        userAgent: req.get('User-Agent') 
+      });
+
+      const result = await UserService.registerUser({ username, password });
+      
+      res.status(201).json({
+        message: '用户注册成功',
+        userId: result.insertId,
+        username
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '未知错误';
+      logger.error('用户注册失败', { 
+        error: errorMessage, 
+        ip: req.ip 
+      });
+      
+      if (errorMessage === '用户名已存在') {
+        res.status(409).json({ error: errorMessage });
+      } else {
+        res.status(500).json({ error: '服务器内部错误' });
+      }
+    }
+  }
 }
 
 export default UserController;
